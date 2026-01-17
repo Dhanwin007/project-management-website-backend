@@ -19,7 +19,7 @@ const userSchema=new mongoose.Schema({
 role: {
     type: String,
     enum: AvalaibleUserRole, 
-    default: UserRolesEnum.MEMBER
+    default: UserRolesEnum.MEMBER//by default it will be member
   },
 refreshToken: {
         type: String // <--- ADD THIS to store the Refresh Token
