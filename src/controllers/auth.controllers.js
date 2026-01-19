@@ -29,7 +29,7 @@ const registerUser = asyncHandler(async(req,res)=>{
         throw new ApiError(409,"User with email or username already exists")
     }
     const user= await User.create({ // User: static mongoose methods like find update create user: instance methods(applied for only person after fetching) 
-        email,
+        email,//email:email here we use shortcut as the variable name and db field name is name
         password,
         username,
         isEmailVerified: false 
@@ -76,7 +76,7 @@ const login = asyncHandler(async (req,res)=>{
     {
         throw new ApiError(400,"Username or email is required");
     }
-    const user = await User.findOne({email})//we have the access to the user from here
+    const user = await User.findOne({email:email})//we have the access to the user from here
     if(!user){
         throw new ApiError(400,"User not registered");
     }
