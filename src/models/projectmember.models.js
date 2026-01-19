@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 import {UserRolesEnum,AvalaibleUserRole} from "../utils/constants.js";
 
-const projectMemberSchema = new Schema({
+const projectMemberSchema = new mongoose.Schema({
     user:{
         type:mongoose.Schema.Types.ObjectId,
         ref:"User",

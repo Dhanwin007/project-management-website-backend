@@ -4,7 +4,6 @@ import {User} from "../models/user.models.js"
 import { asyncHandler } from "../utils/async-handler.js"
 import {ProjectMember } from "../models/projectmember.models.js"
 import {Project} from "../models/project.models.js"
-import {User} from "../models/user.models.js"
 import mongoose from "mongoose";
 
 
@@ -33,7 +32,7 @@ import mongoose from "mongoose";
     }
 
 });
-const validateProjectPermission = (roles=[])=>{asyncHandler(async(req,res,next)=>{
+const validateProjectPermission = (roles=[])=>asyncHandler(async(req,res,next)=>{
     const {projectId}=req.params;
     const userId=req.user._id;
     if(!projectId){
@@ -56,5 +55,5 @@ const validateProjectPermission = (roles=[])=>{asyncHandler(async(req,res,next)=
         throw new ApiError(403,"You do not have permission to perform this action")
     }
 })
-};
+;
 export {verifyJWT,validateProjectPermission};

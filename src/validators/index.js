@@ -1,5 +1,5 @@
 import { body,query } from "express-validator";
-import {AvalaibleUserRole} from "../utils/constants.js"
+import {AvalaibleUserRole, AvailableTaskStatuses} from "../utils/constants.js"
 
 const userRegisterValidator = ()=>{
     return [
@@ -101,8 +101,36 @@ const addMemberToProjectValidator=()=>{
         .isIn(AvalaibleUserRole)//important
         .withMessage("Role is Invalid")
     ]
+};
+const createTaskValidator=()=>{
+    return [
+        body("title")
+        .trim()
+        .notEmpty()
+        .withMessage("Title is required"),
+        body("description")
+        .optional()
+        .trim(),
+        body("assignedToID")
+        .optional()
+        .isMongoId()
+        .withMessage("Invalid assignedToID"),
+        body("status")
+        .notEmpty()
+        .withMessage("Status is required")
+        .isIn(AvailableTaskStatuses)
+        .withMessage("Invalid status")
+    ]
+}
+const createSubTaskValidator=()=>{
+    return [
+        body("title")
+        .trim()
+        .notEmpty()
+        .withMessage("Title is required")
+    ]
 }
 
 export {userRegisterValidator,userLoginValidator,userChangeCurrentPasswordValidator,userForgotPasswordValidator,userResetForgotPasswordValidator
-    ,createProjectValidator,addMemberToProjectValidator
+    ,createProjectValidator,addMemberToProjectValidator,createTaskValidator,createSubTaskValidator
 }

@@ -8,7 +8,7 @@ const taskSchema= new mongoose.Schema({
         trim:true
     },
     description: String,
-    Status:{
+    status:{
         enum:AvailableTaskStatuses,
         default:TaskStatusEnum.TODO,
         type:String,
