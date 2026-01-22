@@ -31,22 +31,17 @@ const registerUser = asyncHandler(async (req, res) => {
   if (existingUser) {
     throw new ApiError(409, 'User with email or username already exists');
   }
+//beggining of local file handling
+ const avatarFile = req.file;
 
-  // --- START AVATAR HANDLING ---
-  // 2. Access the file from req.file (Multer puts it here for upload.single)
-  const avatarLocalPath = req.file?.path;
-
-  if (!avatarLocalPath) {
+  if (!avatarFile) {
     throw new ApiError(400, "Avatar file is required");
   }
 
-  // 3. Upload to Cloudinary
-  const avatar = await uploadOnCloudinary(avatarLocalPath);
-
-  if (!avatar) {
-    throw new ApiError(400, "Avatar upload failed. Please try again.");
-  }
-  // --- END AVATAR HANDLING ---
+  // Generate a URL that points to your local static folder
+  // Example: http://localhost:8000/public/image/17375000-pic.jpg
+  const localUrl = `${req.protocol}://${req.get('host')}/public/image/${avatarFile.filename}`;
+  // --- END LOCAL AVATAR HANDLING ---
 
   // 4. Create the user with the avatar URL and localPath
   const user = await User.create({
