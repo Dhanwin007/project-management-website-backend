@@ -4,10 +4,11 @@ import { validate } from "../middlewares/validator.middleware.js";
 import {userLoginValidator, userRegisterValidator,userChangeCurrentPasswordValidator,userForgotPasswordValidator,userResetForgotPasswordValidator} from "../validators/index.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 import { getCurrentUser } from "../controllers/user.controller.js";
+import {upload} from "../middlewares/multer.middleware.js";
 
 //unsecure routes
  const router=Router();//object is returned here
- router.route("/register").post(userRegisterValidator()/*This is a function from where we are collecting errors*/,validate,registerUser)
+ router.route("/register").post(upload.single('avatar'),userRegisterValidator()/*This is a function from where we are collecting errors*/,validate,registerUser)
  router.route("/login").post(userLoginValidator(),validate,login);
   router.route("/verify-email/:verificationToken").get(verifyEmail);
  router.route("/refresh-token").post(refreshAccessToken);
