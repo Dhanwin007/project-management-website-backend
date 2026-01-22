@@ -5,16 +5,15 @@ import crypto from "crypto";
 import { AvalaibleUserRole, UserRolesEnum } from "../utils/constants.js";
 
 const userSchema=new mongoose.Schema({
-    avatar : {
-        type:{
-            url:String,
-            localPath:String,
-        },
-
-     default :{
-        url:`https://placehold.co/200x200`,
-        localPath:""
-     }
+   avatar: {
+  url: {
+    type: String,
+    default: "https://placehold.co/200x200"
+  },
+  localPath: {
+    type: String,
+    default: ""
+  }
 },
 role: {
     type: String,
