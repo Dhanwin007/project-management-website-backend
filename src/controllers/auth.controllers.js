@@ -20,55 +20,86 @@ catch(error){
 }
 } 
 
-const registerUser = asyncHandler(async(req,res)=>{
-    const {email, username, password, role} = req.body
-    const existingUser=await User.findOne({
-        $or: [{username},{email}]
-    })
-    if(existingUser){
-        throw new ApiError(409,"User with email or username already exists")
-    }
-    const user= await User.create({ // User: static mongoose methods like find update create user: instance methods(applied for only person after fetching) 
-        email,//email:email here we use shortcut as the variable name and db field name is name
-        password,
-        username,
-        isEmailVerified: false 
-    })
+const registerUser = asyncHandler(async (req, res) => {
+  const { email, username, password, role } = req.body;
 
-    const {unHashedToken,hashedToken,tokenExpiry}=user.generateTemporaryToken();
-    user.emailVerificationToken = hashedToken;
-    user.emailVerificationExpiry= tokenExpiry;
-    await user.save({validateBeforeSave: false});
-    try{await sendEmail(
-        {
-            email:user?.email,
-            subject:"please verify your email",
-            mailgenContent: emailVerificationMailgenContent(
-                user.username,
-                `${req.protocol}://${req.get("host")}/api/v1/users/verify-email/${unHashedToken}`
-            )
-        }
-    );}
-    catch(error)
-    {
-        console.log("email not connected",error);
-    }
-    const createdUser=await User.findById(user._id).select(
-        "-password -refreshToken -emailVerificationToken -emailVerificationExpiry"//these fields wil be removed while fetching data
+  // 1. Check if user already exists
+  const existingUser = await User.findOne({
+    $or: [{ username }, { email }],
+  });
+
+  if (existingUser) {
+    throw new ApiError(409, 'User with email or username already exists');
+  }
+
+  // --- START AVATAR HANDLING ---
+  // 2. Access the file from req.file (Multer puts it here for upload.single)
+  const avatarLocalPath = req.file?.path;
+
+  if (!avatarLocalPath) {
+    throw new ApiError(400, "Avatar file is required");
+  }
+
+  // 3. Upload to Cloudinary
+  const avatar = await uploadOnCloudinary(avatarLocalPath);
+
+  if (!avatar) {
+    throw new ApiError(400, "Avatar upload failed. Please try again.");
+  }
+  // --- END AVATAR HANDLING ---
+
+  // 4. Create the user with the avatar URL and localPath
+  const user = await User.create({
+    email,
+    password,
+    username,
+    role: role || UserRolesEnum.MEMBER, // Good practice to handle the role here
+    isEmailVerified: false,
+    avatar: {
+      url: avatar.url,
+      localPath: avatarLocalPath, // Matches your schema
+    },
+  });
+
+  const { unHashedToken, hashedToken, tokenExpiry } =
+    user.generateTemporaryToken();
+  user.emailVerificationToken = hashedToken;
+  user.emailVerificationExpiry = tokenExpiry;
+  
+  await user.save({ validateBeforeSave: false });
+
+  try {
+    await sendEmail({
+      email: user?.email,
+      subject: 'please verify your email',
+      mailgenContent: emailVerificationMailgenContent(
+        user.username,
+        `${req.protocol}://${req.get('host')}/api/v1/users/verify-email/${unHashedToken}`,
+      ),
+    });
+  } catch (error) {
+    // Note: We don't throw an error here so the registration still succeeds 
+    // but we log it for debugging
+    console.log('email not connected', error);
+  }
+
+  const createdUser = await User.findById(user._id).select(
+    '-password -refreshToken -emailVerificationToken -emailVerificationExpiry',
+  );
+
+  if (!createdUser) {
+    throw new ApiError(500, 'something went wrong while registering the user');
+  }
+
+  return res
+    .status(201)
+    .json(
+      new ApiResponse(
+        201,
+        { user: createdUser },
+        'user registered successfully and verification email has been sent on your email',
+      ),
     );
-
-    if(!createdUser){
-        throw new ApiError(500,"something went wrong while registering the user")
-    }
-    return res
-        .status(201)
-        .json(
-            new ApiResponse(
-                201,
-                {user:createdUser},
-                "user registered successfully and verification email has been sent on your email",
-            )
-        )
 });
 const login = asyncHandler(async (req,res)=>{
     const { email,password,username}=req.body;
