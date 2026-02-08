@@ -2,6 +2,7 @@ import { body, query } from 'express-validator';
 import {
   AvalaibleUserRole,
   AvailableTaskStatuses,
+ 
 } from '../utils/constants.js';
 
 const userRegisterValidator = () => {
@@ -22,6 +23,9 @@ const userRegisterValidator = () => {
       .withMessage('username  must be atleast 3 characters long'),
     body('password').trim().notEmpty().withMessage('password is required'),
     body('fullname').optional().trim(),
+    body('role')
+    .isIn(AvalaibleUserRole)
+    .withMessage('Role not defined')
   ];
 };
 const userLoginValidator = () => {

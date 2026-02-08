@@ -10,6 +10,9 @@ import {
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import { UserRolesEnum } from '../utils/constants.js';
+import {deleteFromCloudinary, uploadOnCloudinary} from "../utils/cloudinary.js"
+
+
 
 const generateAccessAndRefreshToken = async (userId) => {
   try {
@@ -30,32 +33,42 @@ const generateAccessAndRefreshToken = async (userId) => {
 const registerUser = asyncHandler(async(req,res)=>{
     const {email, username, password, role} = req.body
     
+    
     const existingUser=await User.findOne({
         $or: [{username},{email}]
     })
     if(existingUser){
         throw new ApiError(409,"User with email or username already exists")
     }
-    //beggining of local file handling
- const avatarFile = req.file;
+    
+     const avatarLocalPath=req.file?.path
 
-  if (!avatarFile) {
+  if (!avatarLocalPath) {
     throw new ApiError(400, "Avatar file is required");
   }
-
-  // Generate a URL that points to your local static folder
-  // Example: http://localhost:8000/public/image/17375000-pic.jpg
-  const localUrl = `${req.protocol}://${req.get('host')}/public/images/${avatarFile.filename}`;
-  // --- END LOCAL AVATAR HANDLING ---
+  let avatar;
+try{
+     avatar=await uploadOnCloudinary(avatarLocalPath);
+     if (!avatar) {
+            throw new ApiError(400, "Error while uploading to Cloudinary");
+        }
+    console.log("uploaded avatar");
+    }
+    catch(error)
+    {
+        console.log("Error uploading Avatar",error)
+        throw new ApiError(500,"Failed to upload error")
+    }
 
     const user= await User.create({ // User: static mongoose methods like find update create user: instance methods(applied for only person after fetching) 
         email,//email:email here we use shortcut as the variable name and db field name is name
         password,
         username,
+        role:role || UserRolesEnum.MEMBER,
         isEmailVerified: false,
     avatar: {
-        url: localUrl,           // Corrected from avatar.url
-        localPath: avatarFile.path // Corrected from avatarLocalPath
+        url: avatar.url,           // Corrected from avatar.url
+        localPath: avatarLocalPath // Corrected from avatarLocalPath
     },
  
     })
