@@ -9,7 +9,7 @@ import {
 } from '../utils/mail.js';
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
-import { UserRolesEnum } from '../constants.js';
+import { UserRolesEnum } from '../utils/constants.js';
 
 const generateAccessAndRefreshToken = async (userId) => {
   try {
