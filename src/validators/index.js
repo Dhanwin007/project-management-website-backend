@@ -24,6 +24,7 @@ const userRegisterValidator = () => {
     body('password').trim().notEmpty().withMessage('password is required'),
     body('fullname').optional().trim(),
     body('role')
+    .optional()
     .isIn(AvalaibleUserRole)
     .withMessage('Role not defined')
   ];

@@ -7,6 +7,7 @@ import { ApiResponse } from '../utils/api-response.js';
 import { asyncHandler } from '../utils/async-handler.js';
 import { ApiError } from '../utils/api-error.js';
 import mongoose from 'mongoose';
+import {deleteFromCloudinary, uploadOnCloudinary} from "../utils/cloudinary.js"
 import {
   AvalaibleUserRole,
   UserRolesEnum,
@@ -41,13 +42,21 @@ const createTask = asyncHandler(async (req, res) => {
     throw new ApiError(404, 'project not found');
   }
   const files = req.files || [];
-  const attachments = files.map((file) => {
-    return {
-      url: `${process.env.SERVER_URL}/images/${file.originalname}`,
-      mimetype: file.mimetype,
-      size: file.size,
-    };
-  });
+ const attachments = await Promise.all(
+    files.map(async (file) => {
+      const uploadResponse = await uploadOnCloudinary(file.path);
+      
+      if (!uploadResponse) {
+        throw new ApiError(500, "Failed to upload one or more attachments");
+      }
+
+      return {
+        url: uploadResponse.url, // Correctly accessing the resolved response
+        mimetype: file.mimetype,
+        size: file.size,
+      };
+    })
+  );
   const task = await Task.create({
     title,
     description: description,
@@ -141,7 +150,7 @@ const getTaskById = asyncHandler(async (req, res) => {
 });
 const updateTask = asyncHandler(async (req, res) => {
   const { projectId, taskId } = req.params;
-  const { title, status, assignedTo, attachments } = req.body;
+  const { title, status, assignedTo} = req.body;
   if (!AvailableTaskStatuses.includes(status)) {
     throw new ApiError(404, 'status in Invalid');
   }
@@ -152,6 +161,22 @@ const updateTask = asyncHandler(async (req, res) => {
   if (!project) {
     throw new ApiError(404, 'project not found');
   }
+   const files = req.files || [];
+ const attachments = await Promise.all(
+    files.map(async (file) => {
+      const uploadResponse = await uploadOnCloudinary(file.path);
+      
+      if (!uploadResponse) {
+        throw new ApiError(500, "Failed to upload one or more attachments");
+      }
+
+      return {
+        url: uploadResponse.url, // Correctly accessing the resolved response
+        mimetype: file.mimetype,
+        size: file.size,
+      };
+    })
+  );
   const task = await Task.findOneAndUpdate(
     {
       _id: new mongoose.Types.ObjectId(taskId),
@@ -175,18 +200,37 @@ const updateTask = asyncHandler(async (req, res) => {
 
 const deleteTask = asyncHandler(async (req, res) => {
   const { projectId, taskId } = req.params;
-  const project = await Project.findById(projectId);
-  if (!project) {
-    throw new ApiError(404, 'project not found');
-  }
-  const task = await Task.findOneAndDelete({
+
+  // 1. Find the task first to get attachment data
+  const task = await Task.findOne({
     _id: taskId,
-    project: projectId, // This prevents deleting tasks from other projects
+    project: projectId,
   });
+
   if (!task) {
-    throw new ApiError(404, 'task not found');
+    throw new ApiError(404, 'Task not found');
   }
-  return res.status(200).json(new ApiResponse(200, 'deleted successfully'));
+
+  // 2. GHOST BUSTER: Delete all attachments from Cloudinary
+  if (task.attachments && task.attachments.length > 0) {
+    await Promise.all(
+      task.attachments.map(async (file) => {
+        // We assume you store the public_id in your schema
+        // If you only store the URL, you'll need to extract the public_id from it
+        if (file.publicId) {
+          await deleteFromCloudinary(file.publicId);
+        }
+      })
+    );
+  }
+
+  // 3. Delete related subtasks to prevent orphaned subtask ghosts
+  await Subtask.deleteMany({ task: taskId });
+
+  // 4. Finally, delete the task record from the database
+  await task.deleteOne();
+
+  return res.status(200).json(new ApiResponse(200, {}, 'Task and associated assets deleted successfully'));
 });
 const createSubTask = asyncHandler(async (req, res) => {
   const { title } = req.body;
